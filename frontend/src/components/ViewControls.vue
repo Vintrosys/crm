@@ -1,64 +1,92 @@
 <template>
-  <div
-    v-if="isMobileView"
-    class="flex flex-col justify-between gap-2 sm:px-5 px-3 py-4"
-  >
-    <div class="flex flex-col gap-2">
-      <div class="flex items-center justify-between gap-2 overflow-x-auto">
-        <div class="flex gap-2">
-          <Filter
-            v-model="list"
-            :doctype="doctype"
-            :default_filters="filters"
-            @update="updateFilter"
-          />
-          <GroupBy
-            v-if="route.params.viewType === 'group_by'"
-            v-model="list"
-            :doctype="doctype"
-            :hideLabel="isMobileView"
-            @update="updateGroupBy"
+<div
+  v-if="isMobileView"
+  class="flex flex-col justify-between gap-2 sm:px-5 px-3 py-4"
+>
+  <div class="flex flex-col gap-2">
+
+    <!-- Top Controls -->
+    <div class="flex items-center justify-between gap-2 overflow-x-auto">
+
+      <!-- Filter + Quick Filters -->
+      <div class="flex gap-2 items-center overflow-x-auto">
+
+        <!-- Filter Button -->
+        <Filter
+          v-model="list"
+          :doctype="doctype"
+          :default_filters="filters"
+          @update="updateFilter"
+        />
+
+        <!-- Quick Filters (Organization etc) -->
+        <div
+          v-for="filter in quickFilterList"
+          :key="filter.fieldname"
+          class="min-w-32"
+        >
+          <QuickFilterField
+            :filter="filter"
+            @applyQuickFilter="(f, v) => applyQuickFilter(f, v)"
           />
         </div>
 
-        <div class="flex gap-2">
-          <Button
-            :tooltip="__('Refresh')"
-            :icon="RefreshIcon"
-            :loading="isLoading"
-            @click="reload()"
-          />
-          <SortBy
-            v-if="route.params.viewType !== 'kanban'"
-            v-model="list"
-            :doctype="doctype"
-            :hideLabel="isMobileView"
-            @update="updateSort"
-          />
-          <KanbanSettings
-            v-if="route.params.viewType === 'kanban'"
-            v-model="list"
-            :doctype="doctype"
-            @update="updateKanbanSettings"
-          />
-          <ColumnSettings
-            v-else-if="!options.hideColumnsButton"
-            v-model="list"
-            :doctype="doctype"
-            :hideLabel="isMobileView"
-            @update="(isDefault) => updateColumns(isDefault)"
-          />
-        </div>
+        <!-- Group By -->
+        <GroupBy
+          v-if="route.params.viewType === 'group_by'"
+          v-model="list"
+          :doctype="doctype"
+          :hideLabel="isMobileView"
+          @update="updateGroupBy"
+        />
       </div>
-      <div
-        v-if="viewUpdated && route.query.view && (!view.public || isManager())"
-        class="flex flex-row-reverse items-center gap-2 border-r pr-2"
-      >
-        <Button :label="__('Cancel')" @click="cancelChanges" />
-        <Button :label="__('Save Changes')" @click="saveView" />
+
+      <!-- Right Buttons -->
+      <div class="flex gap-2">
+        <Button
+          :tooltip="__('Refresh')"
+          :icon="RefreshIcon"
+          :loading="isLoading"
+          @click="reload()"
+        />
+
+        <SortBy
+          v-if="route.params.viewType !== 'kanban'"
+          v-model="list"
+          :doctype="doctype"
+          :hideLabel="isMobileView"
+          @update="updateSort"
+        />
+
+        <KanbanSettings
+          v-if="route.params.viewType === 'kanban'"
+          v-model="list"
+          :doctype="doctype"
+          @update="updateKanbanSettings"
+        />
+
+        <ColumnSettings
+          v-else-if="!options.hideColumnsButton"
+          v-model="list"
+          :doctype="doctype"
+          :hideLabel="isMobileView"
+          @update="(isDefault) => updateColumns(isDefault)"
+        />
       </div>
+
     </div>
+
+    <!-- Save Buttons -->
+    <div
+      v-if="viewUpdated && route.query.view && (!view.public || isManager())"
+      class="flex flex-row-reverse items-center gap-2 border-r pr-2"
+    >
+      <Button :label="__('Cancel')" @click="cancelChanges" />
+      <Button :label="__('Save Changes')" @click="saveView" />
+    </div>
+
   </div>
+</div>
   <div
     v-else-if="customizeQuickFilter"
     class="flex items-center justify-between gap-2 p-5"
@@ -135,7 +163,7 @@
       orientation="horizontal"
     >
       <div
-        v-for="filter in quickFilterList"
+        v-for="filter in quickFilterList.filter(f => !(props.doctype === 'Deal' && f.fieldname === 'organization'))"
         :key="filter.fieldname"
         class="m-1 min-w-36"
       >
@@ -744,7 +772,9 @@ const updateQuickFilters = createResource({
 function saveQuickFilters() {
   let new_filters =
     newQuickFilters.value?.map((filter) => filter.fieldname) || []
-  let old_filters = quickFilters.data?.map((filter) => filter.fieldname) || []
+
+  let old_filters =
+    quickFilters.data?.map((filter) => filter.fieldname) || []
 
   updateQuickFilters.update({
     params: {
@@ -797,24 +827,34 @@ const quickFilterOptions = computed(() => {
 const quickFilterList = computed(() => {
   let filters = quickFilters.data || []
 
+  // Only add Organization filter for Deals in Mobile View
+  if (props.doctype === 'Deal' && isMobileView.value) {
+
+    const hasOrganization = filters.some(
+      (f) => f.fieldname === 'organization'
+    )
+
+    if (!hasOrganization) {
+      filters.unshift({
+        label: 'Organization',
+        fieldname: 'organization',
+        fieldtype: 'Link',
+        options: 'Organization',
+        value: ''
+      })
+    }
+  }
+
   filters.forEach((filter) => {
-    filter['value'] = filter.fieldtype == 'Check' ? false : ''
-    if (list.value.params?.filters[filter.fieldname]) {
+    filter.value = filter.fieldtype == 'Check' ? false : ''
+
+    if (list.value.params?.filters?.[filter.fieldname]) {
       let value = list.value.params.filters[filter.fieldname]
+
       if (Array.isArray(value)) {
-        if (
-          (['Check', 'Select', 'Link', 'Date', 'Datetime'].includes(
-            filter.fieldtype,
-          ) &&
-            value[0]?.toLowerCase() == 'like') ||
-          value[0]?.toLowerCase() != 'like'
-        )
-          return
-        filter['value'] = value[1]?.replace(/%/g, '')
-      } else if (typeof value == 'boolean') {
-        filter['value'] = value
+        filter.value = value[1]?.replace(/%/g, '')
       } else {
-        filter['value'] = value?.replace(/%/g, '')
+        filter.value = value
       }
     }
   })

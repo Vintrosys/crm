@@ -131,29 +131,33 @@ watchDebounced(
 
 const options = createResource({
   url: 'frappe.desk.search.search_link',
+  method: 'GET',
+
   cache: [props.doctype, text.value, props.hideMe, props.filters],
-  method: 'POST',
-  params: {
-    txt: text.value,
-    doctype: props.doctype,
-    filters: props.filters,
-  },
-  transform: (data) => {
-    let allData = data.map((option) => {
-      return {
-        label: option.label || option.value,
-        value: option.value,
-        description: option.description,
-      }
-    })
-    if (!props.hideMe && props.doctype == 'User') {
+
+  params: () => ({
+    txt: text.value || '',
+    doctype: props.doctype || '',
+    filters: JSON.stringify(props.filters || {}),
+    page_length: 20
+  }),
+
+  transform(data) {
+    let allData = (data || []).map((option) => ({
+      label: option.label || option.value,
+      value: option.value,
+      description: option.description
+    }))
+
+    if (!props.hideMe && props.doctype === 'User') {
       allData.unshift({
         label: '@me',
-        value: '@me',
+        value: '@me'
       })
     }
+
     return allData
-  },
+  }
 })
 
 function reload(val, force = false) {
@@ -166,13 +170,13 @@ function reload(val, force = false) {
   )
     return
 
-  options.update({
-    params: {
-      txt: val,
-      doctype: props.doctype,
-      filters: props.filters,
-    },
-  })
+options.update({
+  params: {
+    txt: val || '',
+    doctype: props.doctype,
+    filters: JSON.stringify(props.filters || {}),
+  },
+})
   options.reload()
 }
 
