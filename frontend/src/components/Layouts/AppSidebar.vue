@@ -197,46 +197,11 @@ const isFCSite = ref(window.is_fc_site)
 const isDemoSite = ref(window.is_demo_site)
 
 const links = [
-  // {
-  //   label: 'Dashboard',
-  //   icon: LucideLayoutDashboard,
-  //   to: 'Dashboard',
-  // },
-  // {
-  //   label: 'Leads',
-  //   icon: LeadsIcon,
-  //   to: 'Leads',
-  // },
   {
     label: 'Deals',
     icon: DealsIcon,
     to: 'Deals',
-  },
-  // {
-  //   label: 'Contacts',
-  //   icon: ContactsIcon,
-  //   to: 'Contacts',
-  // },
-  {
-    label: 'Organizations',
-    icon: OrganizationsIcon,
-    to: 'Organizations',
-  },
-  // {
-  //   label: 'Notes',
-  //   icon: NoteIcon,
-  //   to: 'Notes',
-  // },
-  // {
-  //   label: 'Tasks',
-  //   icon: TaskIcon,
-  //   to: 'Tasks',
-  // },
-  // {
-  //   label: 'Call Logs',
-  //   icon: PhoneIcon,
-  //   to: 'Call Logs',
-  // },
+  }
 ]
 
 const allViews = computed(() => {
