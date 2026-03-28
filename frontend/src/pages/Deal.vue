@@ -136,44 +136,6 @@
         v-if="sections.data"
         class="flex flex-1 flex-col justify-between overflow-hidden"
       >
-        <SidePanelLayout
-          :sections="sections.data"
-          :addContact="addContact"
-          doctype="CRM Deal"
-          :docname="dealId"
-          @reload="sections.reload"
-          @beforeFieldChange="beforeStatusChange"
-          @afterFieldChange="reloadAssignees"
-        >
-          <template #actions="{ section }">
-            <div v-if="section.name == 'contacts_section'" class="pr-2">
-              <Link
-                value=""
-                doctype="Contact"
-                :onCreate="
-                  (value, close) => {
-                    _contact = {
-                      first_name: value,
-                      company_name: doc.organization,
-                    }
-                    showContactModal = true
-                    close()
-                  }
-                "
-                @change="(e) => addContact(e)"
-              >
-                <template #target="{ togglePopover }">
-                  <Button
-                    class="h-7 px-3"
-                    variant="ghost"
-                    icon="plus"
-                    @click="togglePopover()"
-                  />
-                </template>
-              </Link>
-            </div>
-          </template>
-        </SidePanelLayout>
       </div>
     </Resizer>
   </div>
