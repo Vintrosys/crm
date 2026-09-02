@@ -114,12 +114,13 @@
         class="flex flex-1 flex-col justify-between overflow-hidden"
       >
         <SidePanelLayout
-          :sections="sections.data"
+          :sections="parsedSections"
           doctype="CRM Organization"
-          :docname="organization.doc.name"
+          :docname="props.organizationId"
           @reload="sections.reload"
           @beforeFieldChange="beforeFieldChange"
         />
+
       </div>
     </Resizer>
     <Tabs
@@ -240,6 +241,13 @@ const { doctypeMeta } = getMeta('CRM Organization')
 const { capture } = useTelemetry()
 
 const route = useRoute()
+
+watch(
+  () => route.params.organizationId,
+  () => {
+    hideModal()
+  },
+)
 const router = useRouter()
 
 const errorTitle = ref('')
@@ -355,29 +363,37 @@ const sections = createResource({
   cache: ['sidePanelSections', 'CRM Organization'],
   params: { doctype: 'CRM Organization' },
   auto: true,
-  transform: (data) => getParsedSections(data),
+})
+
+const parsedSections = computed(() => {
+  if (!sections.data) return []
+  return getParsedSections(sections.data)
 })
 
 function getParsedSections(_sections) {
   return _sections.map((section) => {
-    section.columns = section.columns.map((column) => {
-      column.fields = column.fields.map((field) => {
-        if (field.fieldname === 'address') {
-          return {
-            ...field,
-            create: (value, close) => {
-              showAddressModal()
-              close()
-            },
-            edit: (address) => showAddressModal(address),
-          }
-        } else {
-          return field
+    return {
+      ...section,
+      columns: section.columns.map((column) => {
+        return {
+          ...column,
+          fields: column.fields.map((field) => {
+            if (field.fieldname === 'address') {
+              return {
+                ...field,
+                create: (value, close) => {
+                  showAddressModal()
+                  close()
+                },
+                edit: (address) => showAddressModal(address),
+              }
+            } else {
+              return field
+            }
+          }),
         }
-      })
-      return column
-    })
-    return section
+      }),
+    }
   })
 }
 
@@ -562,17 +578,29 @@ const contactColumns = [
   },
 ]
 
-const { showModal } = useDoctypeModal()
+const { showModal, hideModal } = useDoctypeModal()
 
 function showAddressModal(_address) {
   showModal({
     name: _address || null,
     doctype: 'Address',
+    defaults: {
+      address_title: organization.doc?.organization_name || props.organizationId,
+      links: [
+        {
+          link_doctype: 'CRM Organization',
+          link_name: props.organizationId,
+        },
+      ],
+    },
     callbacks: {
-      afterInsert: (d) => {
+      afterInsert: async (d) => {
         capture('address_created')
         organization.doc.address = d.name
-        organization.save.submit()
+        await organization.save.submit()
+      },
+      afterUpdate: async () => {
+        await organization.reload()
       },
     },
   })
