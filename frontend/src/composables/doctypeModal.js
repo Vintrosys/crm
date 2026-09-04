@@ -22,6 +22,15 @@ function showModal({
   show.value = true
 }
 
+function hideModal() {
+  show.value = false
+  doctype.value = ''
+  name.value = ''
+  title.value = ''
+  defaults.value = {}
+  callbacks.value = {}
+}
+
 function triggerCallback(event, ...args) {
   callbacks.value[event]?.(...args)
 }
@@ -33,7 +42,9 @@ export function useDoctypeModal() {
     name,
     title,
     defaults,
+    callbacks,
     showModal,
+    hideModal,
     triggerCallback,
   }
 }
